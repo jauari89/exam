@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Simple circuit with cell, switch, resistor and ammeter">
+  <rect width="640" height="360" fill="#f8fbfa"/>
+  <path d="M120 180 H220 M420 180 H520 M120 180 V80 H520 V180 M120 180 V280 H520 V180" fill="none" stroke="#10221f" stroke-width="5"/>
+  <line x1="245" y1="150" x2="245" y2="210" stroke="#10221f" stroke-width="5"/>
+  <line x1="270" y1="135" x2="270" y2="225" stroke="#10221f" stroke-width="5"/>
+  <path d="M310 180 l25 -30 l25 60 l25 -60 l25 60" fill="none" stroke="#106b5a" stroke-width="5"/>
+  <circle cx="320" cy="280" r="38" fill="#ffffff" stroke="#10221f" stroke-width="5"/>
+  <text x="306" y="289" font-family="Arial" font-size="30" fill="#10221f">A</text>
+  <line x1="465" y1="80" x2="510" y2="45" stroke="#b42318" stroke-width="5"/>
+  <circle cx="465" cy="80" r="6" fill="#b42318"/>
+  <circle cx="520" cy="80" r="6" fill="#b42318"/>
+  <text x="230" y="120" font-family="Arial" font-size="24" fill="#10221f">Cell</text>
+  <text x="326" y="130" font-family="Arial" font-size="24" fill="#106b5a">Resistor</text>
+  <text x="452" y="38" font-family="Arial" font-size="24" fill="#b42318">Open switch</text>
+</svg>

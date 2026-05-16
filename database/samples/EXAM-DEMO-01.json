@@ -1,0 +1,107 @@
+{
+  "examName": "EXAM-DEMO-01",
+  "title": "Sample Mixed-Format Examination",
+  "subject": "Demonstration",
+  "shuffleSalt": "v2-2026-05",
+  "instructions": "Answer all questions. Multiple choice questions have a single correct answer unless otherwise marked. Checkbox questions may have more than one correct option — partial credit may be awarded. Numerical answers are graded within a small tolerance. Essay and structured questions are marked manually by your instructor.\n\nIn Try Out mode, you will see explanations after submitting; in Strict mode, only your total and topical breakdown.",
+  "questions": [
+    {
+      "id": "Q001",
+      "type": "objective",
+      "topic": "Algebra",
+      "points": 1,
+      "question": "If $3x - 7 = 14$, what is the value of $x$?",
+      "options": [
+        { "id": "A", "text": "$5$" },
+        { "id": "B", "text": "$6$" },
+        { "id": "C", "text": "$7$" },
+        { "id": "D", "text": "$8$" }
+      ],
+      "answer": "C",
+      "explanation": "Add $7$ to both sides: $3x = 21$. Divide by $3$: $x = 7$."
+    },
+    {
+      "id": "Q002",
+      "type": "objective",
+      "topic": "Chemistry",
+      "points": 1,
+      "question": "What is the chemical formula for water? Recall that subscripts denote atom counts: H_2O means two H atoms and one O atom.",
+      "options": [
+        { "id": "A", "text": "H_2O" },
+        { "id": "B", "text": "H_2O_2" },
+        { "id": "C", "text": "HO_2" },
+        { "id": "D", "text": "H_3O" }
+      ],
+      "answer": "A",
+      "explanation": "Water consists of two hydrogen atoms and one oxygen atom, written H_2O."
+    },
+    {
+      "id": "Q003",
+      "type": "checkbox",
+      "topic": "Number Theory",
+      "points": 2,
+      "question": "Select **all** of the following that are prime numbers:",
+      "options": [
+        { "id": "A", "text": "$27$" },
+        { "id": "B", "text": "$29$" },
+        { "id": "C", "text": "$31$" },
+        { "id": "D", "text": "$33$" },
+        { "id": "E", "text": "$37$" }
+      ],
+      "answer": ["B", "C", "E"],
+      "explanation": "$27 = 3^3$ and $33 = 3 \\times 11$, so they are composite. The others have no divisors other than $1$ and themselves."
+    },
+    {
+      "id": "Q004",
+      "type": "numerical",
+      "topic": "Calculus",
+      "points": 2,
+      "question": "Evaluate $\\int_{0}^{2}(3x^2 + 1)\\,dx$. Give your answer to two decimal places.",
+      "answer": 10,
+      "tolerance": 0.05,
+      "explanation": "$\\int (3x^2 + 1)\\,dx = x^3 + x$. Evaluated from $0$ to $2$: $(8+2) - 0 = 10$."
+    },
+    {
+      "id": "Q005",
+      "type": "numerical",
+      "topic": "Physics",
+      "points": 2,
+      "question": "A $2$ kg block accelerates at $3.5$ m/s². What is the net force on the block, in newtons?",
+      "answer": 7,
+      "tolerance": 0.01,
+      "explanation": "$F = ma = 2 \\times 3.5 = 7$ N."
+    },
+    {
+      "id": "Q006",
+      "type": "essay",
+      "topic": "Physics",
+      "points": 10,
+      "question": "State Newton's three laws of motion and give a real-world example of each. Aim for roughly 200–300 words.",
+      "rubric": "2 pts per law correctly stated (×3 = 6), plus 4 pts for the quality of examples and explanation."
+    },
+    {
+      "id": "Q007",
+      "type": "structured",
+      "topic": "Calculus",
+      "points": 12,
+      "question": "Given $f(x) = x^3 - 6x^2 + 9x + 2$, find:\n\n(a) the critical points of $f$,\n(b) the nature of each critical point (max / min / saddle), and\n(c) the value of $f$ at each critical point.\n\nShow your working clearly.",
+      "parts": {
+        "analysis": {
+          "label": "Analysis & Reasoning",
+          "math": false,
+          "hint": "Describe the method you will use (e.g., first derivative test, second derivative test)."
+        },
+        "workings": {
+          "label": "Working (step by step)",
+          "math": true
+        },
+        "conclusion": {
+          "label": "Final Answer",
+          "math": true,
+          "hint": "State each critical point with its nature and the value of f at that point."
+        }
+      },
+      "rubric": "4 pts analysis, 5 pts working (all steps shown correctly), 3 pts conclusion (correct points + nature)."
+    }
+  ]
+}

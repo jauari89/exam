@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Tabel tahap evolusi bintang 1 M☉ dengan suhu inti, sumber energi, dan durasi tiap tahap">
+  <rect width="960" height="540" fill="#f8fbfa"/>
+  <rect x="48" y="48" width="864" height="444" rx="18" fill="#ffffff" stroke="#106b5a" stroke-width="4"/>
+  <text x="80" y="120" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#10221f">Q017 media placeholder</text>
+  <text x="80" y="170" font-family="Arial, sans-serif" font-size="26" fill="#106b5a">Table reference</text>
+  <foreignObject x="80" y="215" width="800" height="210">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Arial,sans-serif;font-size:28px;line-height:1.35;color:#344640;">Tabel tahap evolusi bintang 1 M☉ dengan suhu inti, sumber energi, dan durasi tiap tahap</div>
+  </foreignObject>
+  <text x="80" y="455" font-family="Arial, sans-serif" font-size="18" fill="#64746f">Replace this SVG with the original media file when available.</text>
+</svg>
