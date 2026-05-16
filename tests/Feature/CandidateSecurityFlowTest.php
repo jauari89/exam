@@ -9,9 +9,12 @@ use App\Models\ExamAttempt;
 use App\Models\ExamPaper;
 use App\Models\ExamSeries;
 use App\Models\ExamSession;
+use App\Models\User;
 use App\Services\CandidateTokenService;
 use App\Services\ExamPackageImportService;
+use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class CandidateSecurityFlowTest extends TestCase
@@ -115,6 +118,60 @@ class CandidateSecurityFlowTest extends TestCase
             'total_score' => 3,
             'max_score' => 3,
         ]);
+    }
+
+    public function test_admin_can_view_attempt_timeline_snapshot(): void
+    {
+        $this->seed(RbacSeeder::class);
+        $fixture = $this->examFixture();
+        $issued = app(CandidateTokenService::class)->issue($fixture['candidate'], $fixture['session']);
+
+        $login = $this->postJson('/api/candidate/login', [
+            'exam_session_id' => $fixture['session']->id,
+            'name' => 'Ada Lovelace',
+            'token' => $issued['plain_token'],
+        ])->json();
+
+        $attemptId = $login['attempt_id'];
+        $headers = ['X-Candidate-Session' => $login['session_key']];
+        $attempt = ExamAttempt::with('snapshot')->findOrFail($attemptId);
+        $question = collect($attempt->snapshot->payload['questions'])->firstWhere('external_id', 'Q1');
+
+        $this->postJson("/api/candidate/attempts/$attemptId/heartbeat", [
+            'visibility' => 'visible',
+            'network' => 'online',
+            'activity' => 'question_viewed',
+            'current_question_id' => $question['id'],
+            'current_question_external_id' => 'Q1',
+            'current_question_position' => 1,
+            'answered_count' => 0,
+            'question_count' => 2,
+        ], $headers)->assertOk();
+
+        $payload = [
+            'answers' => [
+                (string) $question['id'] => $question['options'][0]['id'],
+            ],
+        ];
+
+        $this->postJson("/api/candidate/attempts/$attemptId/autosave", ['client_sequence' => 1] + $payload, $headers)->assertOk();
+
+        $this->withHeaders($headers + ['Idempotency-Key' => 'timeline-submit'])
+            ->postJson("/api/candidate/attempts/$attemptId/submit", $payload + ['idempotency_key' => 'timeline-submit'])
+            ->assertOk();
+
+        Sanctum::actingAs(User::query()->where('email', 'admin@example.test')->firstOrFail());
+
+        $this->getJson("/api/reports/attempts/$attemptId/timeline")
+            ->assertOk()
+            ->assertJsonPath('candidate.candidate_number', 'C-001')
+            ->assertJsonPath('summary.autosaves', 1)
+            ->assertJsonPath('summary.heartbeats', 1)
+            ->assertJsonPath('attempt.snapshot.question_count', 2)
+            ->assertJsonFragment(['type' => 'candidate_heartbeat'])
+            ->assertJsonFragment(['type' => 'autosave'])
+            ->assertJsonFragment(['type' => 'final_submit'])
+            ->assertJsonFragment(['type' => 'score']);
     }
 
     private function examFixture(): array

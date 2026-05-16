@@ -16,6 +16,7 @@ class AutosaveRequest extends FormRequest
         return [
             'client_sequence' => ['required', 'integer', 'min:1'],
             'answers' => ['present', 'array'],
+            'context' => ['nullable', 'array'],
         ];
     }
 }

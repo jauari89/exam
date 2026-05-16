@@ -36,6 +36,13 @@ class ReportController extends Controller
         return response()->json($reports->studentAnalysis($examSession, $candidate));
     }
 
+    public function attemptTimeline(ExamAttempt $attempt, ReportService $reports)
+    {
+        Gate::authorize('view-reports');
+
+        return response()->json($reports->attemptTimeline($attempt));
+    }
+
     public function scorePdf(ExamSession $examSession, ScoreReportPdfService $pdf)
     {
         Gate::authorize('view-reports');

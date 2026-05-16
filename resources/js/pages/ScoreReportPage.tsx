@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { BarChart3, ChevronDown, Download, FileArchive, FileText, ListChecks, Search, UserRound } from 'lucide-react';
+import { BarChart3, ChevronDown, Clock3, Download, FileArchive, FileText, ListChecks, Search, UserRound } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { PageHeader } from '../components/Layout';
 import { api } from '../lib/api';
@@ -20,6 +20,7 @@ type ScoreRow = {
   status: string;
   submission?: {
     attempt?: {
+      id?: number;
       status?: string;
       candidate?: { id: number; name: string; candidate_number: string };
     };
@@ -58,6 +59,28 @@ type ReportPayload = {
   incidents: Record<string, number>;
   item_analysis: ItemAnalysisRow[];
   topic_progress: TopicRow[];
+};
+
+type AttemptTimeline = {
+  attempt: {
+    id: number;
+    status: string;
+    started_at?: string;
+    submitted_at?: string;
+    expires_at?: string;
+    snapshot?: { question_count?: number; total_marks?: string | number; duration_minutes?: number };
+  };
+  candidate: { id: number; name: string; candidate_number: string };
+  session: { id: number; name: string; exam?: string };
+  summary: { autosaves: number; heartbeats: number; warnings: number; final_answers: number };
+  events: Array<{
+    at: string;
+    type: string;
+    severity: string;
+    title: string;
+    description?: string;
+    meta?: Record<string, unknown>;
+  }>;
 };
 
 const emptyReport: ReportPayload = {
@@ -102,8 +125,9 @@ export function ScoreReportPage() {
   const [sessionSearch, setSessionSearch] = useState('');
   const [sessionDropdownOpen, setSessionDropdownOpen] = useState(false);
   const [report, setReport] = useState<ReportPayload>(emptyReport);
-  const [activeTab, setActiveTab] = useState<'scores' | 'items' | 'topics' | 'student'>('scores');
+  const [activeTab, setActiveTab] = useState<'scores' | 'items' | 'topics' | 'student' | 'timeline'>('scores');
   const [student, setStudent] = useState<StudentAnalysis | null>(null);
+  const [timeline, setTimeline] = useState<AttemptTimeline | null>(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -139,6 +163,7 @@ export function ScoreReportPage() {
     setLoading(true);
     setMessage('');
     setStudent(null);
+    setTimeline(null);
     try {
       const { data } = await api.get(`/reports/sessions/${id}`);
       setReport({
@@ -184,6 +209,13 @@ export function ScoreReportPage() {
     const { data } = await api.get(`/reports/sessions/${sessionId}/students/${candidateId}`);
     setStudent(data);
     setActiveTab('student');
+  }
+
+  async function loadTimeline(attemptId?: number) {
+    if (!attemptId) return;
+    const { data } = await api.get(`/reports/attempts/${attemptId}/timeline`);
+    setTimeline(data);
+    setActiveTab('timeline');
   }
 
   async function exportEvidence(format: 'json' | 'zip') {
@@ -274,6 +306,7 @@ export function ScoreReportPage() {
             <button className={activeTab === 'items' ? 'active' : ''} onClick={() => setActiveTab('items')}><ListChecks size={18} /> Item analysis</button>
             <button className={activeTab === 'topics' ? 'active' : ''} onClick={() => setActiveTab('topics')}><BarChart3 size={18} /> Topic progress</button>
             <button className={activeTab === 'student' ? 'active' : ''} onClick={() => setActiveTab('student')} disabled={!student}><UserRound size={18} /> Student detail</button>
+            <button className={activeTab === 'timeline' ? 'active' : ''} onClick={() => setActiveTab('timeline')} disabled={!timeline}><Clock3 size={18} /> Attempt timeline</button>
           </div>
 
           {activeTab === 'scores' ? (
@@ -298,7 +331,12 @@ export function ScoreReportPage() {
                     header: 'Analysis',
                     sortable: false,
                     searchable: false,
-                    render: (row) => <button onClick={() => void loadStudent(row.submission?.attempt?.candidate?.id)}>View</button>,
+                    render: (row) => (
+                      <div className="inline-actions">
+                        <button onClick={() => void loadStudent(row.submission?.attempt?.candidate?.id)}>View</button>
+                        <button onClick={() => void loadTimeline(row.submission?.attempt?.id)}>Timeline</button>
+                      </div>
+                    ),
                   },
                 ]}
               />
@@ -369,6 +407,47 @@ export function ScoreReportPage() {
                   />
                 </div>
               ) : <p className="muted">Choose a candidate from Candidate scores to view student analysis.</p>}
+            </section>
+          ) : null}
+
+          {activeTab === 'timeline' ? (
+            <section className="content-panel">
+              {timeline ? (
+                <div className="attempt-timeline-panel">
+                  <div className="timeline-head">
+                    <div>
+                      <span>Snapshot peserta</span>
+                      <h2>{timeline.candidate.candidate_number} / {timeline.candidate.name}</h2>
+                      <small>{timeline.session.name} / Attempt #{timeline.attempt.id}</small>
+                    </div>
+                    <div className="timeline-summary">
+                      <section><span>Autosave</span><strong>{timeline.summary.autosaves}</strong></section>
+                      <section><span>Heartbeat</span><strong>{timeline.summary.heartbeats}</strong></section>
+                      <section><span>Warning</span><strong>{timeline.summary.warnings}</strong></section>
+                      <section><span>Final answers</span><strong>{timeline.summary.final_answers}</strong></section>
+                    </div>
+                  </div>
+                  <div className="snapshot-strip">
+                    <span>Status: <strong>{timeline.attempt.status}</strong></span>
+                    <span>Mulai: <strong>{formatDate(timeline.attempt.started_at)}</strong></span>
+                    <span>Submit: <strong>{formatDate(timeline.attempt.submitted_at)}</strong></span>
+                    <span>Soal: <strong>{timeline.attempt.snapshot?.question_count ?? 0}</strong></span>
+                  </div>
+                  <div className="attempt-timeline">
+                    {timeline.events.map((event, index) => (
+                      <article key={`${event.at}-${event.type}-${index}`} className={`timeline-event ${event.severity}`}>
+                        <time>{formatDate(event.at)}</time>
+                        <div>
+                          <strong>{event.title}</strong>
+                          <p>{event.description}</p>
+                          <small>{event.type.replaceAll('_', ' ')}</small>
+                        </div>
+                      </article>
+                    ))}
+                    {!timeline.events.length ? <p className="muted">Belum ada event timeline untuk attempt ini.</p> : null}
+                  </div>
+                </div>
+              ) : <p className="muted">Pilih Timeline dari tabel Candidate scores.</p>}
             </section>
           ) : null}
         </main>

@@ -93,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/reports/sessions/{examSession}/score-report.pdf', [ReportController::class, 'scorePdf']);
     Route::get('/reports/sessions/{examSession}/items', [ReportController::class, 'items']);
     Route::get('/reports/sessions/{examSession}/students/{candidate}', [ReportController::class, 'student']);
+    Route::get('/reports/attempts/{attempt}/timeline', [ReportController::class, 'attemptTimeline']);
     Route::post('/reports/evidence-exports', [ReportController::class, 'exportEvidence']);
     Route::get('/reports/evidence-exports/{evidenceExport}/download', [ReportController::class, 'downloadEvidence']);
     Route::get('/audit-logs', [AuditLogController::class, 'index']);

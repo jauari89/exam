@@ -79,6 +79,33 @@ function MiniStatus({ statuses }: { statuses: Record<string, number> }) {
 
 const chartColors = ['#2563eb', '#0f9f6e', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2'];
 
+function ActiveAttemptSvg() {
+  return (
+    <svg viewBox="0 0 48 48" role="img" aria-hidden="true" focusable="false">
+      <circle cx="18" cy="17" r="7" fill="currentColor" opacity=".18" />
+      <path d="M18 24c-7.2 0-12 3.4-12 8.4V35h24v-2.6C30 27.4 25.2 24 18 24Z" fill="currentColor" opacity=".18" />
+      <path d="M18 23.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Zm0 2.5C11 26 6.5 29.2 6.5 34v1.5h23V34C29.5 29.2 25 26 18 26Z" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M31 16h4.5l2.3 5.5L42 8" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="38.5" cy="34.5" r="5" fill="#0f9f6e" />
+      <path d="M36.4 34.5h4.2" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function InfoBellSvg() {
+  return (
+    <svg viewBox="0 0 48 48" role="img" aria-hidden="true" focusable="false">
+      <path d="M24 42a5 5 0 0 0 5-5H19a5 5 0 0 0 5 5Z" fill="currentColor" opacity=".18" />
+      <path d="M37 32H11l3-4.6V20a10 10 0 0 1 20 0v7.4L37 32Z" fill="currentColor" opacity=".18" />
+      <path d="M37 32H11l3-4.6V20a10 10 0 0 1 20 0v7.4L37 32Z" fill="none" stroke="currentColor" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 37h8" stroke="currentColor" strokeWidth="2.7" strokeLinecap="round" />
+      <circle cx="35" cy="13" r="7" fill="#f59e0b" />
+      <path d="M35 9.8v3.8" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="35" cy="17.3" r="1.2" fill="#fff" />
+    </svg>
+  );
+}
+
 function ChartPanel({ title, icon, children, meta }: { title: string; icon: ReactNode; children: ReactNode; meta?: string }) {
   return (
     <section className="dashboard-panel chart-panel">
@@ -137,6 +164,8 @@ export function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState<DashboardPayload>(emptyDashboard);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginNotice, setLoginNotice] = useState('');
 
   const summary = dashboard.summary;
   const health = useMemo(() => {
@@ -200,29 +229,75 @@ export function AdminDashboardPage() {
 
   async function login(event: FormEvent) {
     event.preventDefault();
-    const loggedIn = await adminLogin(email, password);
-    setUser(loggedIn);
-    await loadDashboard();
+    setLoginBusy(true);
+    setError('');
+    setLoginNotice('');
+
+    try {
+      const loggedIn = await adminLogin(email, password);
+      setUser(loggedIn);
+      await loadDashboard();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login gagal.');
+    } finally {
+      setLoginBusy(false);
+    }
+  }
+
+  if (!user) {
+    return (
+      <div className="admin-login-stage">
+        <section className="login-panel admin-login-card">
+          <div className="login-mark">
+            <span><ShieldCheck size={24} /></span>
+          </div>
+          <div>
+            <p className="eyebrow">Admin access</p>
+            <h1>Login admin</h1>
+            <p className="muted">Masuk untuk mengelola ujian, bank soal, kandidat, proctoring, dan laporan.</p>
+          </div>
+          <div className="login-notification-actions" aria-label="Notifikasi sebelum login">
+            <button type="button" className="login-icon-button" onClick={() => setLoginNotice('Login dahulu untuk melihat peserta yang sedang mengerjakan ujian secara live.')}>
+              <ActiveAttemptSvg />
+              <span>
+                <strong>Peserta aktif</strong>
+                <small>Status pengerjaan</small>
+              </span>
+            </button>
+            <button type="button" className="login-icon-button" onClick={() => setLoginNotice('Login dahulu untuk membaca info baru, incident, autosave, dan audit terbaru.')}>
+              <InfoBellSvg />
+              <span>
+                <strong>Info baru</strong>
+                <small>Notifikasi sistem</small>
+              </span>
+            </button>
+          </div>
+          {loginNotice ? <p className="login-inline-note">{loginNotice}</p> : null}
+          <form className="stack" onSubmit={login}>
+            <label>
+              Email
+              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
+            </label>
+            <label>
+              Password
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
+            </label>
+            {error ? <p className="error">{error}</p> : null}
+            <button className="primary" disabled={loginBusy}>{loginBusy ? 'Memproses...' : 'Login'}</button>
+          </form>
+        </section>
+      </div>
+    );
   }
 
   return (
     <div>
       <div className="dashboard-head">
         <PageHeader title="Operations Dashboard" eyebrow="Live monitoring" />
-        {user ? (
-          <button className="secondary" onClick={() => void loadDashboard()} disabled={loading}>
-            <RefreshCw size={18} /> Refresh
-          </button>
-        ) : null}
+        <button className="secondary" onClick={() => void loadDashboard()} disabled={loading}>
+          <RefreshCw size={18} /> Refresh
+        </button>
       </div>
-
-      {!user ? (
-        <form className="toolbar" onSubmit={login}>
-          <input value={email} onChange={(event) => setEmail(event.target.value)} />
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-          <button className="primary">Login</button>
-        </form>
-      ) : null}
 
       {error ? <p className="error">{error}</p> : null}
 

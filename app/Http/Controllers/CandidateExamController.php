@@ -51,12 +51,21 @@ class CandidateExamController extends Controller
     {
         $attempts->assertSession($attempt, $request->header('X-Candidate-Session'), true);
         $attempt = $attempts->heartbeat($attempt, $request->all());
-        $proctoring->record($attempt->session, 'candidate_heartbeat', 'info', $request->only('visibility', 'network'), $attempt, $attempt->candidate);
+        $proctoring->record($attempt->session, 'candidate_heartbeat', 'info', $request->only([
+            'visibility',
+            'network',
+            'current_question_id',
+            'current_question_external_id',
+            'current_question_position',
+            'answered_count',
+            'question_count',
+            'activity',
+        ]), $attempt, $attempt->candidate);
 
         return response()->json(['attempt' => $attempt, 'server_time' => now()->toIso8601String()]);
     }
 
-    public function autosave(ExamAttempt $attempt, AutosaveRequest $request, ExamAttemptService $attempts, AutosaveService $autosaves)
+    public function autosave(ExamAttempt $attempt, AutosaveRequest $request, ExamAttemptService $attempts, AutosaveService $autosaves, ProctoringService $proctoring)
     {
         $attempts->assertSession($attempt, $request->header('X-Candidate-Session'), true);
 
@@ -64,13 +73,20 @@ class CandidateExamController extends Controller
             throw ValidationException::withMessages(['attempt' => 'Exam time has expired.']);
         }
 
+        $autosave = $autosaves->save($attempt, $request->validated(), $request);
+        $proctoring->record($attempt->session, 'autosave_saved', 'info', [
+            'client_sequence' => $autosave->client_sequence,
+            'answered_count' => collect($autosave->normalized_answers)->filter(fn ($answer) => filled(data_get($answer, 'answer')))->count(),
+            'question_count' => count($attempt->snapshot?->payload['questions'] ?? []),
+        ], $attempt, $attempt->candidate);
+
         return response()->json([
-            'autosave' => $autosaves->save($attempt, $request->validated(), $request),
+            'autosave' => $autosave,
             'server_time' => now()->toIso8601String(),
         ]);
     }
 
-    public function submit(ExamAttempt $attempt, SubmitAttemptRequest $request, ExamAttemptService $attempts, SubmissionService $submissions)
+    public function submit(ExamAttempt $attempt, SubmitAttemptRequest $request, ExamAttemptService $attempts, SubmissionService $submissions, ProctoringService $proctoring)
     {
         $attempts->assertSession($attempt, $request->header('X-Candidate-Session'), true);
         $idempotencyKey = $request->header('Idempotency-Key') ?: $request->input('idempotency_key');
@@ -79,8 +95,15 @@ class CandidateExamController extends Controller
             throw ValidationException::withMessages(['idempotency_key' => 'Final submit requires an idempotency key.']);
         }
 
+        $submission = $submissions->submit($attempt, $request->validated(), $idempotencyKey, $request);
+        $proctoring->record($attempt->session, 'final_submit', 'success', [
+            'submission_id' => $submission->id,
+            'answer_count' => $submission->answers()->count(),
+            'payload_hash' => $submission->payload_hash,
+        ], $attempt, $attempt->candidate);
+
         return response()->json([
-            'submission' => $submissions->submit($attempt, $request->validated(), $idempotencyKey, $request),
+            'submission' => $submission,
             'server_time' => now()->toIso8601String(),
         ]);
     }

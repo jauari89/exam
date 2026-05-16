@@ -9,6 +9,20 @@ function mmss(seconds: number) {
   return `${minutes}:${secs}`;
 }
 
+function shortTime(value?: string | null) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
+
+function syncLabel(state: string, saving: boolean, lastSyncedAt?: string | null, lastLocalSavedAt?: string | null) {
+  if (saving || state === 'saving') return 'Saving...';
+  if (state === 'synced') return lastSyncedAt ? `Synced ${shortTime(lastSyncedAt)}` : 'Synced';
+  if (state === 'offline') return lastLocalSavedAt ? `Offline saved ${shortTime(lastLocalSavedAt)}` : 'Offline saved';
+  if (state === 'pending') return lastLocalSavedAt ? `Pending sync ${shortTime(lastLocalSavedAt)}` : 'Pending sync';
+  if (state === 'error') return 'Sync issue';
+  return state;
+}
+
 function Rich({ content }: { content: RichContent }) {
   return (
     <div className="rich">
@@ -53,9 +67,25 @@ function QuestionInput({ question, value, onChange }: { question: ExamQuestion; 
 export function CandidateExamPage() {
   const { attemptId } = useParams();
   const navigate = useNavigate();
-  const { paper, answers, setAnswers, secondsRemaining, status, saving, autosave, submit } = useCandidateAttempt(attemptId);
+  const {
+    paper,
+    answers,
+    setAnswers,
+    secondsRemaining,
+    status,
+    saving,
+    autosave,
+    submit,
+    heartbeat,
+    setAttemptContext,
+    syncState,
+    syncError,
+    lastLocalSavedAt,
+    lastSyncedAt,
+  } = useCandidateAttempt(attemptId);
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const question = paper?.questions[index];
   const isAnswered = (item: ExamQuestion) => {
     const value = answers[String(item.id)];
@@ -63,6 +93,17 @@ export function CandidateExamPage() {
   };
   const answered = useMemo(() => paper?.questions.filter(isAnswered).length ?? 0, [answers, paper]);
   const progressPercent = paper?.questions.length ? Math.round((answered / paper.questions.length) * 100) : 0;
+  const questionContext = useMemo(() => {
+    if (!paper || !question) return {};
+
+    return {
+      current_question_id: question.id,
+      current_question_external_id: question.external_id,
+      current_question_position: question.position,
+      answered_count: answered,
+      question_count: paper.questions.length,
+    };
+  }, [answered, paper, question]);
 
   async function move(next: number) {
     await autosave();
@@ -71,8 +112,15 @@ export function CandidateExamPage() {
 
   async function finalSubmit() {
     setSubmitting(true);
-    await submit();
-    navigate('/candidate/submitted');
+    setSubmitError('');
+    try {
+      await submit();
+      navigate('/candidate/submitted');
+    } catch (error: unknown) {
+      setSubmitError(error instanceof Error ? error.message : 'Submit gagal. Jawaban tetap tersimpan lokal.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   useEffect(() => {
@@ -80,6 +128,16 @@ export function CandidateExamPage() {
       navigate('/candidate/submitted');
     }
   }, [navigate, status]);
+
+  useEffect(() => {
+    setAttemptContext(questionContext);
+  }, [questionContext, setAttemptContext]);
+
+  useEffect(() => {
+    if (question) {
+      void heartbeat({ ...questionContext, activity: 'question_viewed' });
+    }
+  }, [heartbeat, question, questionContext]);
 
   if (!paper || !question) {
     return <section className="exam-shell"><p>Loading secure attempt...</p></section>;
@@ -97,7 +155,7 @@ export function CandidateExamPage() {
           <i><b style={{ width: `${progressPercent}%` }} /></i>
         </div>
         <div className={secondsRemaining < 300 ? 'timer danger' : 'timer'}>{mmss(secondsRemaining)}</div>
-        <div className="save-state">{saving ? 'Saving...' : status}</div>
+        <div className={`save-state ${syncState}`} title={syncError || undefined}>{syncLabel(syncState, saving, lastSyncedAt, lastLocalSavedAt)}</div>
       </header>
       <aside className="question-nav">
         <div className="question-nav-title">Question numbers</div>
@@ -132,7 +190,9 @@ export function CandidateExamPage() {
         </div>
       </main>
       <footer className="exam-actions">
-        <div className="exam-action-status">Question {index + 1} / {paper.questions.length}</div>
+        <div className={submitError || syncError ? 'exam-action-status error-text' : 'exam-action-status'}>
+          {submitError || syncError || `Question ${index + 1} / ${paper.questions.length}`}
+        </div>
         <button className="secondary" disabled={index === 0} onClick={() => void move(index - 1)}><ChevronLeft size={18} /> Previous</button>
         <button className="secondary" onClick={() => void autosave()}><Save size={18} /> Save</button>
         {index < paper.questions.length - 1 ? <button className="primary" onClick={() => void move(index + 1)}>Next <ChevronRight size={18} /></button> : <button className="primary" disabled={submitting} onClick={() => void finalSubmit()}><Send size={18} /> Submit</button>}
